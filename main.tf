@@ -7,6 +7,16 @@ provider "aws" {
 data "aws_availability_zones" "available" {}
 data "aws_region" "current" {}
 
+# Terraform Data Block - Lookup Ubuntu 16.04
+data "aws_ami" "ubuntu_16_04" {
+most_recent = true
+filter {
+name = "name"
+values = ["ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*"]
+}
+owners = ["099720109477"]
+}
+
 #Define the VPC 
 resource "aws_vpc" "vpc" {
   cidr_block = var.vpc_cidr
@@ -15,6 +25,7 @@ resource "aws_vpc" "vpc" {
     Name        = var.vpc_name
     Environment = "demo_environment"
     Terraform   = "true"
+    Region      = data.aws_region.current.name
   }
 }
 
@@ -117,7 +128,7 @@ resource "aws_nat_gateway" "nat_gateway" {
 }
 
 resource "aws_instance" "web" {
-  ami           = "ami-01cc34ab2709337aa"
+  ami           = data.aws_ami.ubuntu_16_04.id
   instance_type = "t2.micro"
 
   subnet_id              = aws_subnet.public_subnets["public_subnet_1"].id
@@ -126,5 +137,18 @@ resource "aws_instance" "web" {
   tags = {
     "Terraform" = "true"
   }
+}
+
+resource "aws_subnet" "variables-subnet" {
+  vpc_id                  = aws_vpc.vpc.id
+  cidr_block              = var.variables_sub_cidr
+  availability_zone       = var.variables_sub_az
+  map_public_ip_on_launch = var.variables_sub_auto_ip
+
+  tags = {
+    Name      = "sub-variables-${var.variables_sub_az}"
+    Terraform = "true"
+  }
+
 }
 
